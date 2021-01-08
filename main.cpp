@@ -21,18 +21,35 @@ int main() {
     }
 
     //Read the first 2 strings of the file. Ignore the string 'NumTasks' and convert the number of tasks to an integer
-    while (inFile >> t && counter < 2) {
+    while (counter < 2 && inFile >> t) {
         if(counter == 1) {
             numTasks = stoi(t);
         }
         counter++;
     }
 
-    //At this point, numTasks = the number of tasks
-    for(int i = 0; i < numTasks; i++) {
+    //Define 3 arrays on the heap, all big enough to hold the task data of every task
+    string* taskNames = new string[numTasks];
+    int* runtime = new int[numTasks];
+    int* period = new int[numTasks];
 
+    //Read in every task and add its data to the appropriate array
+    for(int i = 0; i < numTasks; i++) {
+        cin >> t;
+        counter = 0;
+        while (counter < 3 && inFile >> t) {
+            if(counter == 0) {
+                taskNames[i] = t;
+            } else if (counter == 1) {
+                runtime[i] = stoi(t);
+            } else {
+                period[i] = stoi(t);
+            }
+            counter++;
+        }
     }
 
+    //Perform RMS scheduling on the input tasks
     
     // prints the contents of the file
     cout << numTasks << endl;
