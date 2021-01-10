@@ -1,9 +1,11 @@
 {
     "configurations": [
         {
-            "name": "Win32",
+            "name": "Win64",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "dependencies/matlib/include",
+                "dependencies/matlib/lib"
             ],
             "defines": [
                 "_DEBUG",

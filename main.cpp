@@ -4,7 +4,12 @@
 #include <iostream>
 #include <string> 
 #include <map>
+#include <random>
+#include <cmath>
+#include "dependencies\matlib\include\matplot\matplot.h"
 using namespace std;
+using namespace matplot;
+
 
 int main() {
     int counter = 0;
@@ -162,7 +167,19 @@ int main() {
             cout << x << " " << taskNames[importantI] << " Completes" << endl;
         }
     }
+    
+    double r = 2;
+    double xc = 4;
+    double yc = 3;
+    std::vector<double> theta = linspace(0, 2 * pi);
+    std::vector<double> x =
+        transform(theta, [=](auto theta) { return r * cos(theta) + xc; });
+    std::vector<double> y =
+        transform(theta, [=](auto theta) { return r * sin(theta) + yc; });
+    plot(x, y);
+    axis(matplot::equal);
 
+    show(); 
 
     // Enter anything to exit
     cin >> t;
