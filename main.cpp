@@ -4,11 +4,10 @@
 #include <iostream>
 #include <string> 
 #include <map>
-#include <random>
-#include <cmath>
-#include "dependencies\matlib\include\matplot\matplot.h"
+#include <stdio.h>
+#include "gnuplot.h"
+
 using namespace std;
-using namespace matplot;
 
 
 int main() {
@@ -63,7 +62,7 @@ int main() {
         int n2 = LCM;
         int max;
         
-        // maximum value between n1 and n2 is stored in max
+        //The maximum value between n1 and n2 is stored in max
         max = (n1 > n2) ? n1 : n2;
 
         do {
@@ -77,6 +76,21 @@ int main() {
     }
 
     cout << "RMS Schedule" << endl << endl;
+
+    //Open a file to store the results of the RMS data
+    ofstream rmsFile;
+    rmsFile.open("RMS.txt");
+
+    //These arrays will store the co-ordinates of the rectangles to draw when graphing the results
+    int** listOfLists = new int*[numTasks];
+    
+    for(int i = 0; i < numTasks; i++) {
+        listOfLists[i] = new int[LCM];      //Each list is for a different task. In the worst case, 1 task runs every time, hence the size
+
+        for(int x = 0; x < LCM; x++) {
+            listOfLists[i][x] = -1;
+        }
+    }
 
     //Perform RMS scheduling on the input tasks
     for(int x = 0; x < LCM; x++) {
@@ -95,6 +109,7 @@ int main() {
 
         //Print the current execution number
         cout << x << " ";
+        rmsFile << x << " ";
 
         /*Calcualte any deadline misses
          *Deadline misses occur if the the number of executions of the task is smaller than (the execution time of the task * execution cycle)
@@ -103,6 +118,7 @@ int main() {
         for(int i = 0; i < numTasks; i++) {
             if (x != 0 && executions[i] < (runtimes[i] * ((int)((x) / periods[i])))) {
                 cout << taskNames[i] << " Misses" << endl << x << " ";
+                rmsFile << taskNames[i] << " Misses" << endl << x << " ";
             }
         }
 
@@ -110,14 +126,19 @@ int main() {
         if (taskExecutes) {
             executions[importantI] +=1;
             cout << taskNames[importantI] << " Executes" << endl;
+            rmsFile << taskNames[importantI] << " Executes" << endl;
+            listOfLists[importantI][x] = x;
         }
         
 
         //State if the task has completed or not (the number of executions = the execution time * execution cycle)
         if((runtimes[importantI] * (1+(int)((x+1) / periods[importantI]))) >= executions[importantI] && (executions[importantI] % runtimes[importantI] == 0) && taskExecutes) {
             cout << x << " " << taskNames[importantI] << " Completes" << endl;
+            rmsFile << x << " " << taskNames[importantI] << " Completes" << endl;
         }
     }
+
+    rmsFile.close();
 
     //RMS scheduling is now finished. We need to reset the number of executions for each task to 0 for EDF schedluling:
     for(int i = 0; i < numTasks; i++) {
@@ -125,6 +146,10 @@ int main() {
     }
     
     cout << endl << endl << "EDF Schedule" << endl << endl;
+
+    //Open a file to store the results of the RMS data
+    ofstream edfFile;
+    edfFile.open("EDF.txt");
 
     //Permorms EDF scheduling on the input tasks.
     for(int x = 0; x < LCM; x++) {
@@ -144,6 +169,7 @@ int main() {
 
         //Print the current execution number
         cout << x << " ";
+        edfFile << x << " ";
 
         /*Calcualte any deadline misses
          *Deadline misses occur if the the number of executions of the task is smaller than (the execution time of the task * execution cycle)
@@ -152,6 +178,7 @@ int main() {
         for(int i = 0; i < numTasks; i++) {
             if (x != 0 && executions[i] < (runtimes[i] * ((int)((x) / periods[i])))) {
                 cout << taskNames[i] << " Misses" << endl << x << " ";
+                edfFile << taskNames[i] << " Misses" << endl << x << " ";
             }
         }
 
@@ -159,29 +186,49 @@ int main() {
         if(taskExecutes) {
             executions[importantI] +=1;
             cout << taskNames[importantI] << " Executes" << endl;
+            edfFile << taskNames[importantI] << " Executes" << endl;
         }
         
 
         //State if the task has completed or not (the number of executions = the execution time * execution cycle)
         if((runtimes[importantI] * (1+(int)((x+1) / periods[importantI]))) >= executions[importantI] && (executions[importantI] % runtimes[importantI] == 0) && taskExecutes) {
             cout << x << " " << taskNames[importantI] << " Completes" << endl;
+            edfFile << x << " " << taskNames[importantI] << " Completes" << endl;
         }
     }
-    
-    double r = 2;
-    double xc = 4;
-    double yc = 3;
-    std::vector<double> theta = linspace(0, 2 * pi);
-    std::vector<double> x =
-        transform(theta, [=](auto theta) { return r * cos(theta) + xc; });
-    std::vector<double> y =
-        transform(theta, [=](auto theta) { return r * sin(theta) + yc; });
-    plot(x, y);
-    axis(matplot::equal);
 
-    show(); 
+    inFile.close();
+    edfFile.close();
+
+    gnuplot p;
+    p("set term pngcairo dashed size 800,400");
+    p("set output 'boxes.eps'");
+    p("set style fill solid");
+    p("unset ytics");
+    p("set ytics('Processor1' 1.5,'Processor2' 0.5)");
+    p("unset key");
+    p("set xrange [-1:" + to_string(LCM) + "]");
+    p("set yrange [0:" + to_string(numTasks) + "]");
+    p("set xlabel 't'");
+    
+    //Drawing the boxes
+
+    std::cin >> t;
+
+    counter = 1;
+
+    for(int i = 0; i < numTasks; i++) {
+        for(int x = 0; x < LCM; x++) {
+            if(listOfLists[i][x] == x) {
+                string toPlot = "set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i) + " to " + to_string(x+1) + "," + to_string(i+0.7) + " fc rgb 'gold'";
+                cout << toPlot << endl;
+                p("set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i) + " to " + to_string(x+1) + "," + to_string(i+0.7) + " fc rgb 'gold'");
+                counter++;
+            }
+        }
+    }
 
     // Enter anything to exit
-    cin >> t;
+    std::cin >> t;
     return 0;
 }

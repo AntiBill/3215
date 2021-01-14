@@ -10,8 +10,6 @@
                 "-g",
                 "-o",
                 "myfile.exe",
-                "-L${workspaceFolder}\\dependencies\\matlib\\lib -l matplot.lib",
-                "-I${workspaceFolder}\\dependencies\\matlib\\include",
                 "main.cpp"
             ],
             "group": {
