@@ -82,13 +82,19 @@ int main() {
     rmsFile.open("RMS.txt");
 
     //These arrays will store the co-ordinates of the rectangles to draw when graphing the results
-    int** listOfLists = new int*[numTasks];
+    int** listOfLists = new int*[numTasks]; //To hold all data about when each task executes
+    int** listOfComp = new int*[numTasks];  //To hold all data about when each task completes
+    int** listOfMiss = new int*[numTasks];  //To hold all data about when each task misses
     
     for(int i = 0; i < numTasks; i++) {
-        listOfLists[i] = new int[LCM];      //Each list is for a different task. In the worst case, 1 task runs every time, hence the size
+        listOfLists[i] = new int[LCM];      //Each list is for a different task. In the worst case, 1 task runs every single time
+        listOfComp[i] = new int[LCM];       //interval of the schedule, hence the size is LCM, the total length of the whole schedule.
+        listOfMiss[i] = new int[LCM];
 
         for(int x = 0; x < LCM; x++) {
             listOfLists[i][x] = -1;
+            listOfComp[i][x] = -1;
+            listOfMiss[i][x] = -1;
         }
     }
 
@@ -119,6 +125,7 @@ int main() {
             if (x != 0 && executions[i] < (runtimes[i] * ((int)((x) / periods[i])))) {
                 cout << taskNames[i] << " Misses" << endl << x << " ";
                 rmsFile << taskNames[i] << " Misses" << endl << x << " ";
+                listOfMiss[importantI][x] = x;
             }
         }
 
@@ -135,10 +142,73 @@ int main() {
         if((runtimes[importantI] * (1+(int)((x+1) / periods[importantI]))) >= executions[importantI] && (executions[importantI] % runtimes[importantI] == 0) && taskExecutes) {
             cout << x << " " << taskNames[importantI] << " Completes" << endl;
             rmsFile << x << " " << taskNames[importantI] << " Completes" << endl;
+            listOfComp[importantI][x] = x;
         }
     }
 
     rmsFile.close();
+
+    //The next 50 lines or so (any line beginning 'p') is passing commands to GNUPlot...
+    //which only works if GNUPlot is added to your PATH environment variable for Windows.
+
+    gnuplot p;
+    p("set term pngcairo dashed size 800,400");
+    p("set output 'RMS.png'");
+    p("set style fill solid");
+    p("unset ytics");
+
+    string yAxisString = "set ytics(";
+
+    for(int i = 0; i < numTasks; i++) {
+        if(i == (numTasks - 1)) {
+            yAxisString += ("'" + taskNames[i] + "' " + to_string(i+0.5) + ")");
+        } else {
+            yAxisString += ("'" + taskNames[i] + "' " + to_string(i+0.5) + ", ");
+        }
+        
+    }
+
+    p(yAxisString);
+    p("unset key");
+    p("set xrange [0:" + to_string(LCM) + "]");
+    p("set yrange [0:" + to_string(numTasks) + "]");
+    p("set xlabel 't'");
+
+    //Drawing the graph
+
+    counter = 1;
+
+    for(int i = 0; i < numTasks; i++) {
+        for(int x = 0; x < LCM; x++) {
+
+            //Draws a box to show the task executing
+            if(listOfLists[i][x] == x) {
+                //See report for an explanation of this command
+                p("set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i+0.3) + " to " + to_string(x+1) + "," + to_string(i+0.7) + " fc rgb 'blue'");
+                counter++;
+            }
+        }
+    }
+
+    for(int i = 0; i < numTasks; i++) {
+        for(int x = 0; x < LCM; x++) {
+            //Draws a green circle to show the task completing
+            if(listOfComp[i][x] == x) {
+                //See report for an explanation of this command
+                p("set object " + to_string(counter) + " circle at first " + to_string(x+1) + "," + to_string(i+0.6) + " radius char 0.2 fillstyle empty border lc rgb 'green' lw 2");
+                counter++;
+            }
+
+            //Draws a red circle to show the task missing
+            if(listOfMiss[i][x] == x) {
+                //See report for an explanation of this command
+                p("set object " + to_string(counter) + " circle at first " + to_string(x+1) + "," + to_string(i+0.4) + " radius char 0.2 fillstyle empty border lc rgb 'red' lw 2");
+                counter++;
+            }
+        }
+    }
+
+    p("plot 1 w l lt 2 lc rgb 'green'"); //We must plot SOMETHING to draw the graph, that's just how GNUPlot works.
 
     //RMS scheduling is now finished. We need to reset the number of executions for each task to 0 for EDF schedluling:
     for(int i = 0; i < numTasks; i++) {
@@ -151,6 +221,15 @@ int main() {
     ofstream edfFile;
     edfFile.open("EDF.txt");
 
+    //We also need to reset the values in the lists of lists...
+    for(int i = 0; i < numTasks; i++) {
+        for(int x = 0; x < LCM; x++) {
+            listOfLists[i][x] = -1;
+            listOfComp[i][x] = -1;
+            listOfMiss[i][x] = -1;
+        }
+    }
+
     //Permorms EDF scheduling on the input tasks.
     for(int x = 0; x < LCM; x++) {
 
@@ -159,7 +238,7 @@ int main() {
         int importantI = 0;
         bool taskExecutes = false;
         for(int i = 0; i < numTasks; i++) {
-            int deadline = ((periods[i] * (1+(int)((x) / periods[i]))) - x) - (runtimes[i] - executions[i]);
+            int deadline = ((periods[i] * (1+(int)((x) / periods[i]))) - x);
             if (deadline < lowestDeadline && executions[i] < (runtimes[i] * (1+(int)((x) / periods[i])))) {
                 lowestDeadline = deadline;
                 importantI = i;
@@ -179,6 +258,7 @@ int main() {
             if (x != 0 && executions[i] < (runtimes[i] * ((int)((x) / periods[i])))) {
                 cout << taskNames[i] << " Misses" << endl << x << " ";
                 edfFile << taskNames[i] << " Misses" << endl << x << " ";
+                listOfMiss[importantI][x] = x;
             }
         }
 
@@ -187,6 +267,7 @@ int main() {
             executions[importantI] +=1;
             cout << taskNames[importantI] << " Executes" << endl;
             edfFile << taskNames[importantI] << " Executes" << endl;
+            listOfLists[importantI][x] = x;
         }
         
 
@@ -194,39 +275,70 @@ int main() {
         if((runtimes[importantI] * (1+(int)((x+1) / periods[importantI]))) >= executions[importantI] && (executions[importantI] % runtimes[importantI] == 0) && taskExecutes) {
             cout << x << " " << taskNames[importantI] << " Completes" << endl;
             edfFile << x << " " << taskNames[importantI] << " Completes" << endl;
+            listOfComp[importantI][x] = x;
         }
     }
 
     inFile.close();
     edfFile.close();
 
-    gnuplot p;
     p("set term pngcairo dashed size 800,400");
-    p("set output 'boxes.eps'");
+    p("set output 'EDF.png'");
     p("set style fill solid");
     p("unset ytics");
-    p("set ytics('Processor1' 1.5,'Processor2' 0.5)");
+
+    yAxisString = "set ytics(";
+
+    for(int i = 0; i < numTasks; i++) {
+        if(i == (numTasks - 1)) {
+            yAxisString += ("'" + taskNames[i] + "' " + to_string(i+0.5) + ")");
+        } else {
+            yAxisString += ("'" + taskNames[i] + "' " + to_string(i+0.5) + ", ");
+        }
+        
+    }
+
+    p(yAxisString);
     p("unset key");
-    p("set xrange [-1:" + to_string(LCM) + "]");
+    p("set xrange [0:" + to_string(LCM) + "]");
     p("set yrange [0:" + to_string(numTasks) + "]");
     p("set xlabel 't'");
     
-    //Drawing the boxes
-
-    std::cin >> t;
+    //Drawing the graph
 
     counter = 1;
 
     for(int i = 0; i < numTasks; i++) {
         for(int x = 0; x < LCM; x++) {
+
+            //Draws a box to show the task executing
             if(listOfLists[i][x] == x) {
-                string toPlot = "set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i) + " to " + to_string(x+1) + "," + to_string(i+0.7) + " fc rgb 'gold'";
-                cout << toPlot << endl;
-                p("set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i) + " to " + to_string(x+1) + "," + to_string(i+0.7) + " fc rgb 'gold'");
+                //See report for an explanation of this command
+                p("set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i+0.3) + " to " + to_string(x+1) + "," + to_string(i+0.7) + " fc rgb 'blue'");
                 counter++;
             }
         }
     }
+
+    for(int i = 0; i < numTasks; i++) {
+        for(int x = 0; x < LCM; x++) {
+            //Draws a green circle to show the task completing
+            if(listOfComp[i][x] == x) {
+                //See report for an explanation of this command
+                p("set object " + to_string(counter) + " circle at first " + to_string(x+1) + "," + to_string(i+0.6) + " radius char 0.2 fillstyle empty border lc rgb 'green' lw 2");
+                counter++;
+            }
+
+            //Draws a red circle to show the task missing
+            if(listOfMiss[i][x] == x) {
+                //See report for an explanation of this command
+                p("set object " + to_string(counter) + " circle at first " + to_string(x+1) + "," + to_string(i+0.4) + " radius char 0.2 fillstyle empty border lc rgb 'red' lw 2");
+                counter++;
+            }
+        }
+    }
+
+    p("plot 1 w l lt 2 lc rgb 'green'"); //We must plot SOMETHING to draw the graph, that's just how GNUPlot works.
 
     // Enter anything to exit
     std::cin >> t;
