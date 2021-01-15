@@ -125,7 +125,7 @@ int main() {
             if (x != 0 && executions[i] < (runtimes[i] * ((int)((x) / periods[i])))) {
                 cout << taskNames[i] << " Misses" << endl << x << " ";
                 rmsFile << taskNames[i] << " Misses" << endl << x << " ";
-                listOfMiss[importantI][x] = x;
+                listOfMiss[i][x] = x;
             }
         }
 
@@ -184,7 +184,7 @@ int main() {
             //Draws a box to show the task executing
             if(listOfLists[i][x] == x) {
                 //See report for an explanation of this command
-                p("set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i+0.3) + " to " + to_string(x+1) + "," + to_string(i+0.7) + " fc rgb 'blue'");
+                p("set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i+0.3) + " to " + to_string(x+1) + "," + to_string(i+0.7) + " fc rgb 'blue' lw 2");
                 counter++;
             }
         }
@@ -195,20 +195,20 @@ int main() {
             //Draws a green circle to show the task completing
             if(listOfComp[i][x] == x) {
                 //See report for an explanation of this command
-                p("set object " + to_string(counter) + " circle at first " + to_string(x+1) + "," + to_string(i+0.6) + " radius char 0.2 fillstyle empty border lc rgb 'green' lw 2");
+                p("set object " + to_string(counter) + " circle at " + to_string(x+1) + "," + to_string(i+0.6) + " radius char 0.2 fillstyle empty border lc rgb 'green' lw 2");
                 counter++;
             }
 
             //Draws a red circle to show the task missing
             if(listOfMiss[i][x] == x) {
                 //See report for an explanation of this command
-                p("set object " + to_string(counter) + " circle at first " + to_string(x+1) + "," + to_string(i+0.4) + " radius char 0.2 fillstyle empty border lc rgb 'red' lw 2");
+                p("set object " + to_string(counter) + " circle at " + to_string(x+1) + "," + to_string(i+0.4) + " radius char 0.2 fillstyle empty border lc rgb 'red' lw 2");
                 counter++;
             }
         }
     }
 
-    p("plot 1 w l lt 2 lc rgb 'green'"); //We must plot SOMETHING to draw the graph, that's just how GNUPlot works.
+    p("plot 1 w l lt 2 lc rgb 'white'"); //We must plot SOMETHING to draw the graph, that's just how GNUPlot works.
 
     //RMS scheduling is now finished. We need to reset the number of executions for each task to 0 for EDF schedluling:
     for(int i = 0; i < numTasks; i++) {
@@ -238,7 +238,11 @@ int main() {
         int importantI = 0;
         bool taskExecutes = false;
         for(int i = 0; i < numTasks; i++) {
-            int deadline = ((periods[i] * (1+(int)((x) / periods[i]))) - x);
+            int deadline = ((periods[i] * (1+(int)((x) / periods[i]))));
+            //if we are deadline missing, the deadline should be earlier
+            if (x != 0 && executions[i] < (runtimes[i] * ((int)((x) / periods[i])))) {
+                deadline = ((int)(executions[i] / runtimes[i])+1) * periods[i];
+            }
             if (deadline < lowestDeadline && executions[i] < (runtimes[i] * (1+(int)((x) / periods[i])))) {
                 lowestDeadline = deadline;
                 importantI = i;
@@ -258,7 +262,7 @@ int main() {
             if (x != 0 && executions[i] < (runtimes[i] * ((int)((x) / periods[i])))) {
                 cout << taskNames[i] << " Misses" << endl << x << " ";
                 edfFile << taskNames[i] << " Misses" << endl << x << " ";
-                listOfMiss[importantI][x] = x;
+                listOfMiss[i][x] = x;
             }
         }
 
@@ -282,6 +286,8 @@ int main() {
     inFile.close();
     edfFile.close();
 
+    counter = 0;
+
     p("set term pngcairo dashed size 800,400");
     p("set output 'EDF.png'");
     p("set style fill solid");
@@ -291,9 +297,9 @@ int main() {
 
     for(int i = 0; i < numTasks; i++) {
         if(i == (numTasks - 1)) {
-            yAxisString += ("'" + taskNames[i] + "' " + to_string(i+0.5) + ")");
+            yAxisString += ("'" + taskNames[i] + "' " + to_string(i+0.5+numTasks+1) + ")");
         } else {
-            yAxisString += ("'" + taskNames[i] + "' " + to_string(i+0.5) + ", ");
+            yAxisString += ("'" + taskNames[i] + "' " + to_string(i+0.5+numTasks+1) + ", ");
         }
         
     }
@@ -301,7 +307,7 @@ int main() {
     p(yAxisString);
     p("unset key");
     p("set xrange [0:" + to_string(LCM) + "]");
-    p("set yrange [0:" + to_string(numTasks) + "]");
+    p("set yrange ["+ to_string(numTasks+1) + ":" + to_string(2*numTasks+1) + "]");
     p("set xlabel 't'");
     
     //Drawing the graph
@@ -314,7 +320,7 @@ int main() {
             //Draws a box to show the task executing
             if(listOfLists[i][x] == x) {
                 //See report for an explanation of this command
-                p("set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i+0.3) + " to " + to_string(x+1) + "," + to_string(i+0.7) + " fc rgb 'blue'");
+                p("set object " + to_string(counter) + " rectangle from " + to_string(x) + "," + to_string(i+0.3+numTasks+1) + " to " + to_string(x+1) + "," + to_string(i+0.7+numTasks+1) + " fc rgb 'blue' lw 2");
                 counter++;
             }
         }
@@ -325,20 +331,20 @@ int main() {
             //Draws a green circle to show the task completing
             if(listOfComp[i][x] == x) {
                 //See report for an explanation of this command
-                p("set object " + to_string(counter) + " circle at first " + to_string(x+1) + "," + to_string(i+0.6) + " radius char 0.2 fillstyle empty border lc rgb 'green' lw 2");
+                p("set object " + to_string(counter) + " circle at " + to_string(x+1) + "," + to_string(i+0.6+numTasks+1) + " radius char 0.2 fillstyle empty border lc rgb 'green' lw 2");
                 counter++;
             }
 
             //Draws a red circle to show the task missing
             if(listOfMiss[i][x] == x) {
                 //See report for an explanation of this command
-                p("set object " + to_string(counter) + " circle at first " + to_string(x+1) + "," + to_string(i+0.4) + " radius char 0.2 fillstyle empty border lc rgb 'red' lw 2");
+                p("set object " + to_string(counter) + " circle at " + to_string(x+1) + "," + to_string(i+0.4+numTasks+1) + " radius char 0.2 fillstyle empty border lc rgb 'red' lw 2");
                 counter++;
             }
         }
     }
 
-    p("plot 1 w l lt 2 lc rgb 'green'"); //We must plot SOMETHING to draw the graph, that's just how GNUPlot works.
+    p("plot 1 w l lt 2 lc rgb 'white'"); //We must plot SOMETHING to draw the graph, that's just how GNUPlot works.
 
     // Enter anything to exit
     std::cin >> t;
