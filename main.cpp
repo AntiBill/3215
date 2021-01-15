@@ -75,7 +75,7 @@ int main() {
         } while (true);
     }
 
-    cout << "RMS Schedule" << endl << endl;
+    cout << "Plotting RMS Schedule..." << endl;
 
     //Open a file to store the results of the RMS data
     ofstream rmsFile;
@@ -114,7 +114,6 @@ int main() {
         }
 
         //Print the current execution number
-        cout << x << " ";
         rmsFile << x << " ";
 
         /*Calcualte any deadline misses
@@ -123,7 +122,6 @@ int main() {
         */
         for(int i = 0; i < numTasks; i++) {
             if (x != 0 && executions[i] < (runtimes[i] * ((int)((x) / periods[i])))) {
-                cout << taskNames[i] << " Misses" << endl << x << " ";
                 rmsFile << taskNames[i] << " Misses" << endl << x << " ";
                 listOfMiss[i][x] = x;
             }
@@ -132,7 +130,6 @@ int main() {
         //Execute valid task - using 'importantI' which represents the index of the task chosen to execute this time
         if (taskExecutes) {
             executions[importantI] +=1;
-            cout << taskNames[importantI] << " Executes" << endl;
             rmsFile << taskNames[importantI] << " Executes" << endl;
             listOfLists[importantI][x] = x;
         }
@@ -140,7 +137,6 @@ int main() {
 
         //State if the task has completed or not (the number of executions = the execution time * execution cycle)
         if((runtimes[importantI] * (1+(int)((x+1) / periods[importantI]))) >= executions[importantI] && (executions[importantI] % runtimes[importantI] == 0) && taskExecutes) {
-            cout << x << " " << taskNames[importantI] << " Completes" << endl;
             rmsFile << x << " " << taskNames[importantI] << " Completes" << endl;
             listOfComp[importantI][x] = x;
         }
@@ -215,7 +211,7 @@ int main() {
         executions[i] = 0;
     }
     
-    cout << endl << endl << "EDF Schedule" << endl << endl;
+    cout << endl << "Plotting EDF Schedule..." << endl << endl;
 
     //Open a file to store the results of the RMS data
     ofstream edfFile;
@@ -251,7 +247,6 @@ int main() {
         }
 
         //Print the current execution number
-        cout << x << " ";
         edfFile << x << " ";
 
         /*Calcualte any deadline misses
@@ -260,7 +255,6 @@ int main() {
         */
         for(int i = 0; i < numTasks; i++) {
             if (x != 0 && executions[i] < (runtimes[i] * ((int)((x) / periods[i])))) {
-                cout << taskNames[i] << " Misses" << endl << x << " ";
                 edfFile << taskNames[i] << " Misses" << endl << x << " ";
                 listOfMiss[i][x] = x;
             }
@@ -269,7 +263,6 @@ int main() {
         //Execute valid task - using 'importantI' which represents the index of the task chosen to execute this time
         if(taskExecutes) {
             executions[importantI] +=1;
-            cout << taskNames[importantI] << " Executes" << endl;
             edfFile << taskNames[importantI] << " Executes" << endl;
             listOfLists[importantI][x] = x;
         }
@@ -277,7 +270,6 @@ int main() {
 
         //State if the task has completed or not (the number of executions = the execution time * execution cycle)
         if((runtimes[importantI] * (1+(int)((x+1) / periods[importantI]))) >= executions[importantI] && (executions[importantI] % runtimes[importantI] == 0) && taskExecutes) {
-            cout << x << " " << taskNames[importantI] << " Completes" << endl;
             edfFile << x << " " << taskNames[importantI] << " Completes" << endl;
             listOfComp[importantI][x] = x;
         }
@@ -347,6 +339,7 @@ int main() {
     p("plot 1 w l lt 2 lc rgb 'white'"); //We must plot SOMETHING to draw the graph, that's just how GNUPlot works.
 
     // Enter anything to exit
+    cout << "Program finished, input any string to exit" << endl;
     std::cin >> t;
     return 0;
 }
